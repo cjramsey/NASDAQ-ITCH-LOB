@@ -35,7 +35,7 @@ public:
 
     ~ITCHReader();
 
-    void read_messages(std::function<void(const Message& msg)> process, uint64_t& counter);
+    void read_messages(std::function<void(Message&& msg)> process, uint64_t& counter);
 
 private:
     std::ifstream file;

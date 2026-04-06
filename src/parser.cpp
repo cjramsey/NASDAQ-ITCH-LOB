@@ -228,7 +228,7 @@ ITCHReader::~ITCHReader() {
         file.close();
 };
 
-void ITCHReader::read_messages(std::function<void(const Message& msg)> process, uint64_t& counter) {
+void ITCHReader::read_messages(std::function<void(Message&& msg)> process, uint64_t& counter) {
     std::array<std::byte, BUFFER_SIZE> buffer;
     std::byte* cursor = buffer.data();
     std::byte* buf_end = buffer.data();
