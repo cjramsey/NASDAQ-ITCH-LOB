@@ -5,3 +5,7 @@ ideas.txt
 *.NASDAQ_ITCH50
 
 .vscode
+
+*.data
+
+*.old
