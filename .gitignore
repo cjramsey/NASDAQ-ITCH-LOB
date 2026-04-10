@@ -1,6 +1,6 @@
 ideas.txt
 
-/build
+/build*
 
 *.NASDAQ_ITCH50
 
@@ -9,3 +9,5 @@ ideas.txt
 *.data
 
 *.old
+
+dispatch.txt
