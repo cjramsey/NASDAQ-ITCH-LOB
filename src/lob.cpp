@@ -3,6 +3,16 @@
 #include <variant>
 #include "lob.h"
 
+bool operator==(const Order& order1, const Order& order2) {
+    return (
+        order1.price == order2.price &&
+        order1.shares == order2.shares &&
+        order1.side == order2.side &&
+        order1.timestamp == order2.timestamp &&
+        order2.stock == order2.stock
+    );
+}
+
 std::ostream& operator<<(std::ostream& os, const Order& order) {
     os << ((order.side == Side::Buy) ? "Buy: " : "Sell: ");
     os << "Price = " << order.price << ' ' << "Shares = " << order.shares;
@@ -15,7 +25,7 @@ std::ostream& operator<<(std::ostream& os, const Order& order) {
 }
 
 uint64_t ticker_key(const Ticker& t) {
-    uint64_t key;
+    uint64_t key = 0;
     std::memcpy(&key, t.data(), 8);
     return key;
 }
@@ -53,7 +63,7 @@ void OrderbookManager::handle(const OrderDeleteMessage& msg) {
 }
 
 void OrderbookManager::handle(const OrderCancelMessage& msg) {
-    Order order{orders[msg.order_reference_number]};
+    Order& order{orders[msg.order_reference_number]};
 
     order.shares -= msg.cancelled_shares;
 
@@ -61,40 +71,40 @@ void OrderbookManager::handle(const OrderCancelMessage& msg) {
 }
 
 void OrderbookManager::handle(const OrderReplaceMessage& msg) {
-    Order order{orders[msg.original_order_reference_number]};
+    Order& order{orders[msg.original_order_reference_number]};
 
     uint64_t key{ ticker_key(order.stock) };
 
     books[key].removeOrder(order.price, order.shares, order.side);
 
-    orders.erase(msg.original_order_reference_number);
-
     books[key].addOrder(msg.price, msg.shares, order.side);
 
     orders[msg.new_order_reference_number] = {msg.price, msg.shares, order.side, msg.timestamp, order.stock};
+
+    orders.erase(msg.original_order_reference_number);
 }
 
 void OrderbookManager::handle(const OrderExecutedMessage& msg) {
-    Order order{orders[msg.order_reference_number]};
+    Order& order{orders[msg.order_reference_number]};
 
-    books[ticker_key(order.stock)].removeOrder(order.price, order.shares, order.side);
+    books[ticker_key(order.stock)].removeOrder(order.price, msg.executed_shares, order.side);
 
-    orders[msg.order_reference_number].shares -= msg.executed_shares;
+    order.shares -= msg.executed_shares;
 
-    if (orders[msg.order_reference_number].shares == 0)
+    if (order.shares == 0)
     {
         orders.erase(msg.order_reference_number);
     }
 }
 
 void OrderbookManager::handle(const OrderExecutedPriceMessage& msg) {
-    Order order{orders[msg.order_reference_number]};
+    Order& order{orders[msg.order_reference_number]};
 
-    books[ticker_key(order.stock)].removeOrder(order.price, order.shares, order.side);
+    books[ticker_key(order.stock)].removeOrder(order.price, msg.executed_shares, order.side);
 
-    orders[msg.order_reference_number].shares -= msg.executed_shares;
+    order.shares -= msg.executed_shares;
 
-    if (orders[msg.order_reference_number].shares == 0)
+    if (order.shares == 0)
     {
         orders.erase(msg.order_reference_number);
     }
@@ -120,7 +130,7 @@ void Orderbook::removeOrder(uint32_t price, uint32_t shares, Side side) {
     }
     else
     {
-        asks[price] += shares;
+        asks[price] -= shares;
         if (asks[price] == 0)
             asks.erase(price);
     }

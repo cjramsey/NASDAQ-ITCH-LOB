@@ -13,7 +13,7 @@
 int main()
 {   
     // const std::string path = "/mnt/d/01302020.NASDAQ_ITCH50";
-    const std::string path = "./sample1billion.NASDAQ_ITCH50";
+    const std::string path = "./data/sample1billion.NASDAQ_ITCH50";
     ITCHReader reader{path};
     OrderbookManager orderbook_manager{};
     uint64_t counter{};

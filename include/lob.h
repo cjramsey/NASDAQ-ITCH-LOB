@@ -20,7 +20,12 @@ struct Order {
     Ticker stock; // needed to find the right book
 };
 
+bool operator==(const Order& order1, const Order& order2);
+
 std::ostream& operator<<(std::ostream& os, const Order& order);
+
+// Orderbook is purely reconstruction
+// Relies on data source to maintain correct orderbook invariants
 
 class Orderbook {
 public:
@@ -40,7 +45,7 @@ public:
 };
 
 class OrderbookManager {
-private:
+protected:
     void handle(const AddOrderMessage& msg);
     void handle(const AddOrderMPIDAttributionMessage& msg);
     void handle(const OrderExecutedMessage& msg);
