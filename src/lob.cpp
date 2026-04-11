@@ -14,19 +14,21 @@ bool operator==(const Order& order1, const Order& order2) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Order& order) {
-    os << ((order.side == Side::Buy) ? "Buy: " : "Sell: ");
-    os << "Price = " << order.price << ' ' << "Shares = " << order.shares;
+    os << "Side: " << ((order.side == Side::Buy) ? "Buy" : "Sell") << '\n';
+    os << "Price = " << order.price << '\n';
+    os << "Shares = " << order.shares << '\n';
     os << " Stock = ";
     for (const auto& c: order.stock)
         os << c;
-    os << " Timestamp: " << parse_timestamp(order.timestamp);
     os << '\n';
+    os << " Timestamp: " << parse_timestamp(order.timestamp);
     return os;
 }
 
+// For using ticker as key when accessing relevant orderbook
 uint64_t ticker_key(const Ticker& t) {
     uint64_t key = 0;
-    std::memcpy(&key, t.data(), 8);
+    std::memcpy(&key, t.data(), 8); // Converts bytes directly to 64-bit unsigned integer
     return key;
 }
 
@@ -35,6 +37,9 @@ void OrderbookManager::process(const Message& msg) {
         handle(m);
     }, msg);
 }
+
+// handle method overloaded for each parsed message type
+// Delegates orderbook logic to correct orderbook and performs housekeeping for orders 
 
 void OrderbookManager::handle(const AddOrderMessage& msg) {
     // Defer price level logic to orderbook itself
@@ -63,7 +68,7 @@ void OrderbookManager::handle(const OrderDeleteMessage& msg) {
 }
 
 void OrderbookManager::handle(const OrderCancelMessage& msg) {
-    Order& order{orders[msg.order_reference_number]};
+    Order& order{orders[msg.order_reference_number]};   // use reference to minimize hashes performed, compiler might elide anyway
 
     order.shares -= msg.cancelled_shares;
 
@@ -71,7 +76,7 @@ void OrderbookManager::handle(const OrderCancelMessage& msg) {
 }
 
 void OrderbookManager::handle(const OrderReplaceMessage& msg) {
-    Order& order{orders[msg.original_order_reference_number]};
+    Order order{orders[msg.original_order_reference_number]};
 
     uint64_t key{ ticker_key(order.stock) };
 
@@ -85,26 +90,35 @@ void OrderbookManager::handle(const OrderReplaceMessage& msg) {
 }
 
 void OrderbookManager::handle(const OrderExecutedMessage& msg) {
-    Order& order{orders[msg.order_reference_number]};
+    // Using nests scope because inserting or removing keys invalidates references
+    uint64_t shares_remaining;
+    {
+        Order& order{orders[msg.order_reference_number]};
 
-    books[ticker_key(order.stock)].removeOrder(order.price, msg.executed_shares, order.side);
+        books[ticker_key(order.stock)].removeOrder(order.price, msg.executed_shares, order.side);
 
-    order.shares -= msg.executed_shares;
+        order.shares -= msg.executed_shares;
+        shares_remaining = order.shares;
+    }
 
-    if (order.shares == 0)
+    if (shares_remaining == 0)
     {
         orders.erase(msg.order_reference_number);
     }
 }
 
 void OrderbookManager::handle(const OrderExecutedPriceMessage& msg) {
-    Order& order{orders[msg.order_reference_number]};
+    int shares_remaining;
+    {
+        Order& order{orders[msg.order_reference_number]};
 
-    books[ticker_key(order.stock)].removeOrder(order.price, msg.executed_shares, order.side);
+        books[ticker_key(order.stock)].removeOrder(order.price, msg.executed_shares, order.side);
 
-    order.shares -= msg.executed_shares;
+        order.shares -= msg.executed_shares;
+        shares_remaining = order.shares;
+    }
 
-    if (order.shares == 0)
+    if (shares_remaining == 0)
     {
         orders.erase(msg.order_reference_number);
     }

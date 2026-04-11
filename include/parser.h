@@ -5,24 +5,12 @@
 
 #include "types.h"
 
-
-constexpr size_t powi(uint64_t base, unsigned int exp)
-{
-    size_t res = 1;
-    while (exp) {
-        if (exp & 1)
-            res *= base;
-        exp >>= 1;
-        base *= base;
-    }
-    return res;
-}
-
-
-static constexpr size_t BUFFER_SIZE = powi(2, 20);
+static constexpr size_t BUFFER_SIZE = 1 << 16;
 static constexpr size_t MAX_MSG_SIZE = 50;
+static constexpr size_t LENGTH_BYTES = 2; 
 
 
+// Class for reading binary data from sample files
 class ITCHReader
 {
 public:

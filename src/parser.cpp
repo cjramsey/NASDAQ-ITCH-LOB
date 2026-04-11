@@ -235,66 +235,81 @@ void ITCHReader::read_messages(std::function<void(Message&& msg)> process, uint6
     
     while (true)
     {
+        // Move leftover unread bytes at the end of the buffer to the start
         std::size_t leftover = buf_end - cursor;
         std::memmove(buffer.data(), cursor, leftover);
+        // Reset cursor and end pointers
         cursor = buffer.data();
         buf_end = buffer.data() + leftover;
 
+        // Fill the remainder of the buffer
         file.read(reinterpret_cast<char*>(buf_end), BUFFER_SIZE - leftover);
         std::size_t bytes_read = file.gcount();
         if (bytes_read == 0) 
             break;
         buf_end += bytes_read;
 
-        while (buf_end >= MAX_MSG_SIZE + cursor + 2)
+        // Stop once the cursor is within the maximum message length + bytes for the length
+        // We lose out on at most 2-3 messages per iteration through the buffer using this lazier stopping criterion
+        while (cursor + MAX_MSG_SIZE + LENGTH_BYTES <= buf_end)
         {
+            // Byte order for NASDAQ sample files is big-endian
+            // First two bytes represent the length of the next message
             uint16_t len_be;
-            std::memcpy(&len_be, cursor, 2);
+            std::memcpy(&len_be, cursor, LENGTH_BYTES);
             uint16_t len = be16toh(len_be);
 
-            uint8_t type = std::to_integer<uint8_t>(cursor[2]);
+            cursor += LENGTH_BYTES;
             
-            switch (type)
+            // Next byte is a char representing the type of message
+            // Endianness does not matter for single bytes
+            uint8_t message_type = std::to_integer<uint8_t>(*cursor);
+
+            ++cursor;
+            
+            // Consider changing switch statement to dispatch table to fix branch misses if bottleneck
+            // Only actively processing add, execute, replace, cancel, delete messages
+            switch (message_type)
             {
                 case MessageType::AddOrder:
                 {
-                    AddOrderMessage msg = parser::parse_add_order(cursor + 3);
+                    AddOrderMessage msg = parser::parse_add_order(cursor);
                     process(msg);
                     break;
                 }
                 case MessageType::AddOrderMPIDAttribution:
                 {
-                    AddOrderMPIDAttributionMessage msg = parser::parse_add_order_mpid(cursor + 3);
+                    AddOrderMPIDAttributionMessage msg = parser::parse_add_order_mpid(cursor);
                     process(msg);
                     break;
                 }
                 case MessageType::OrderExecuted:
                 {
-                    OrderExecutedMessage msg = parser::parse_order_executed(cursor + 3);
+                    OrderExecutedMessage msg = parser::parse_order_executed(cursor);
                     process(msg);
                     break;
                 }
                 case MessageType::OrderExecutedPrice:
                 {
-                    OrderExecutedPriceMessage msg = parser::parse_order_executed_price(cursor + 3);
+                    OrderExecutedPriceMessage msg = parser::parse_order_executed_price(cursor);
                     process(msg);
                     break;
                 }
                 case MessageType::OrderCancel:
                 {
-                    OrderCancelMessage msg = parser::parse_order_cancel(cursor + 3);
+                    OrderCancelMessage msg = parser::parse_order_cancel(cursor);
                     process(msg);
                     break;
                 }
                 case MessageType::OrderDelete:
                 {
-                    OrderDeleteMessage msg = parser::parse_order_delete(cursor + 3);
+                    OrderDeleteMessage msg = parser::parse_order_delete(cursor);
                     process(msg);
                     break;
                 }
                 case MessageType::OrderReplace:
                 {
-                    OrderReplaceMessage msg = parser::parse_order_replace(cursor + 3);
+                    OrderReplaceMessage msg = parser::parse_order_replace(cursor);
                     process(msg);
                     break;
                 }
@@ -302,7 +317,7 @@ void ITCHReader::read_messages(std::function<void(Message&& msg)> process, uint6
                     break;
             }
             ++counter;
-            cursor += 2 + len;
+            cursor += len - 1;  // Move cursor to first byte of next message
         }
     }
 };

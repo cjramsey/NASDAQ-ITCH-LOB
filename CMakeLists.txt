@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(cmake/FetchDependencies.cmake)
+
 add_library(project_options INTERFACE)
 target_compile_options(project_options INTERFACE -march=native -Wno-interference-size)
 
@@ -36,8 +38,6 @@ if(PROJECT_IS_TOP_LEVEL)
     option(BUILD_TESTS      "Build tests"       ON)
     option(BUILD_BENCHMARKS "Build benchmarks"  ON)
 endif()
-
-include(cmake/FetchDependencies.cmake)
 
 if (BUILD_TESTS)
     enable_testing()

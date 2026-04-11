@@ -7,7 +7,7 @@
 
 enum class Side : char { Buy = 'B', Sell = 'S' };
 
-// Use in switch case for identifying message types
+// Used in switch case/dispatch table for identifying message types
 namespace MessageType {
     constexpr char SystemEvent = 'S';
     constexpr char StockDirectory = 'R';
@@ -37,6 +37,7 @@ namespace MessageType {
 template<char MessageType_t> 
 constexpr uint16_t MessageLength = 0;
 
+// Message lengths are for checking struct sizes 
 template<> constexpr uint16_t MessageLength<MessageType::SystemEvent> = 12;
 template<> constexpr uint16_t MessageLength<MessageType::StockDirectory> = 39;
 template<> constexpr uint16_t MessageLength<MessageType::StockTradingAction> = 25;
@@ -74,7 +75,7 @@ The messages parsed are:
     6. OrderDeleteMessage
     7. OrderReplaceMessage
 
-The rest are ignored as they are not applicable to the toy orderbook.
+The rest are ignored as they are not applicable to the toy orderbook, e.g. Market-Wide Circuit Breaker messages.
 */
 
 struct SystemEventMessage {
@@ -87,7 +88,7 @@ struct SystemEventMessage {
 struct StockDirectoryMessage {
     uint16_t stock_locate;
     uint16_t tracking_number;
-    std::array<uint8_t, 6> timestamp;
+    std::array<uint8_t, 6> timestamp;   // consider using type alias
     std::array<char, 8> stock;
     char market_category;
     char financial_status_indicator;
@@ -316,7 +317,7 @@ struct DirectListingCapitalRaiseMessage {
 
 #pragma pack(pop)
 
-// Check size of structs are as intended, subtract 
+// Check size of structs are as intended, subtract one as the character symbol not included in structs
 static_assert(sizeof(SystemEventMessage) == MessageLength<MessageType::SystemEvent> - 1);
 static_assert(sizeof(StockDirectoryMessage) == MessageLength<MessageType::StockDirectory> - 1);
 static_assert(sizeof(StockTradingActionMessage) == MessageLength<MessageType::StockTradingAction> - 1);
@@ -340,6 +341,8 @@ static_assert(sizeof(BrokenTradeMessage) == MessageLength<MessageType::BrokenTra
 static_assert(sizeof(NOIIMessage) == MessageLength<MessageType::NOII> - 1);
 static_assert(sizeof(RetailInterestMessage) == MessageLength<MessageType::RetailInterest> - 1);
 static_assert(sizeof(DirectListingCapitalRaiseMessage) == MessageLength<MessageType::DirectListingCapitalRaise> - 1);
+
+//Helper functions
 
 uint64_t parse_timestamp(const std::array<uint8_t, 6>& timestamp);
 
