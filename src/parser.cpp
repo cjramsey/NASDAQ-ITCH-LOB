@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <cstring>
 #include <cassert>
+#include <vector>
 
 #include "types.h"
 #include "parser.h"
@@ -129,6 +131,7 @@ OrderExecutedPriceMessage parser::parse_order_executed_price(const std::byte* cu
 
     std::memcpy(&msg.match_number, cursor, sizeof(msg.match_number));
     msg.match_number = be64toh(msg.match_number);
+    cursor += sizeof(msg.match_number);
 
     std::memcpy(&msg.printable, cursor, sizeof(msg.printable));
     cursor += sizeof(msg.printable);
@@ -322,3 +325,105 @@ void ITCHReader::read_messages(std::function<void(Message&& msg)> process, uint6
     }
 };
 
+
+Timestamp convertIntegerToTimestamp(const uint64_t value) {
+    Timestamp time{};
+    std::memcpy(time.data(), &value, std::min(sizeof(value), sizeof(time)));
+    return time;
+}
+
+Ticker convertStringToTicker(const std::string& name) {
+    Ticker ticker{};
+    std::copy(name.begin(), 
+              name.begin() + std::min(name.length(), ticker.size()),
+              ticker.begin());
+    return ticker;
+} 
+
+std::vector<std::byte> parser::build_add_order_bytes(uint64_t timestamp, uint64_t order_reference_number, Side side, uint32_t shares, std::string stock, uint32_t price) {
+    AddOrderMessage msg{};
+    msg.timestamp = convertIntegerToTimestamp(timestamp);
+    msg.order_reference_number = htobe64(order_reference_number);
+    msg.side = side;
+    msg.shares = htobe32(shares);
+    msg.stock = convertStringToTicker(stock);
+    msg.price = htobe32(price);
+
+    std::vector<std::byte> raw_bytes{sizeof(msg)};
+    std::memcpy(&raw_bytes[0], &msg, sizeof(msg));
+    return raw_bytes;
+}
+
+std::vector<std::byte> parser::build_add_order_mpid_bytes(uint64_t timestamp, uint64_t order_reference_number, Side side, uint32_t shares, std::string stock, uint32_t price, uint32_t MPID) {
+    AddOrderMPIDAttributionMessage msg{};
+    msg.timestamp = convertIntegerToTimestamp(timestamp);
+    msg.order_reference_number = htobe64(order_reference_number);
+    msg.side = side;
+    msg.shares = htobe32(shares);
+    msg.stock = convertStringToTicker(stock);
+    msg.price = htobe32(price);
+    msg.MPID = htobe32(MPID);
+
+    std::vector<std::byte> raw_bytes{sizeof(msg)};
+    std::memcpy(&raw_bytes[0], &msg, sizeof(msg));
+    return raw_bytes;
+}
+
+std::vector<std::byte> parser::build_execute_order_bytes(uint64_t timestamp, uint64_t order_reference_number, uint32_t executed_shares, uint64_t match_number) {
+    OrderExecutedMessage msg{};
+    msg.timestamp = convertIntegerToTimestamp(timestamp);
+    msg.order_reference_number = htobe64(order_reference_number);
+    msg.executed_shares = htobe32(executed_shares);
+    msg.match_number = htobe64(match_number);
+
+    std::vector<std::byte> raw_bytes{sizeof(msg)};
+    std::memcpy(&raw_bytes[0], &msg, sizeof(msg));
+    return raw_bytes;
+}
+
+std::vector<std::byte> parser::build_execute_price_order_bytes(uint64_t timestamp, uint64_t order_reference_number, uint32_t executed_shares, uint64_t match_number, uint32_t execution_price) {
+    OrderExecutedPriceMessage msg{};
+    msg.timestamp = convertIntegerToTimestamp(timestamp);
+    msg.order_reference_number = htobe64(order_reference_number);
+    msg.executed_shares = htobe32(executed_shares);
+    msg.match_number = htobe64(match_number);
+    msg.execution_price = htobe32(execution_price);
+    
+    std::vector<std::byte> raw_bytes{sizeof(msg)};
+    std::memcpy(&raw_bytes[0], &msg, sizeof(msg));
+    return raw_bytes;
+}
+
+std::vector<std::byte> parser::build_cancel_order_bytes(uint64_t timestamp, uint64_t order_reference_number, uint32_t cancelled_shares) {
+    OrderCancelMessage msg{};
+    msg.timestamp = convertIntegerToTimestamp(timestamp);
+    msg.order_reference_number = htobe64(order_reference_number);
+    msg.cancelled_shares = htobe32(cancelled_shares);
+
+    std::vector<std::byte> raw_bytes{sizeof(msg)};
+    std::memcpy(&raw_bytes[0], &msg, sizeof(msg));
+    return raw_bytes;
+}
+
+std::vector<std::byte> parser::build_replace_order_bytes(uint64_t timestamp, uint64_t original_id, uint64_t new_id, uint32_t shares, uint32_t price) {
+    OrderReplaceMessage msg{};
+    msg.timestamp = convertIntegerToTimestamp(timestamp);
+    msg.original_order_reference_number = htobe64(original_id);
+    msg.new_order_reference_number = htobe64(new_id);
+    msg.shares = htobe32(shares);
+    msg.price = htobe32(price);
+
+    std::vector<std::byte> raw_bytes{sizeof(msg)};
+    std::memcpy(&raw_bytes[0], &msg, sizeof(msg));
+    return raw_bytes;
+}
+
+std::vector<std::byte> parser::build_delete_order_bytes(uint64_t timestamp, uint64_t order_reference_number) {
+    OrderDeleteMessage msg{};
+    msg.timestamp = convertIntegerToTimestamp(timestamp);
+    msg.order_reference_number = htobe64(order_reference_number);
+
+    std::vector<std::byte> raw_bytes{sizeof(msg)};
+    std::memcpy(&raw_bytes[0], &msg, sizeof(msg));
+    return raw_bytes;
+}

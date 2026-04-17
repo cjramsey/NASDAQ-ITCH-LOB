@@ -1,4 +1,4 @@
-add_executable(tests lob_test.cpp)
+add_executable(tests lob_test.cpp parser_test.cpp)
 
 target_link_libraries(tests
     PRIVATE

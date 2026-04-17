@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstring>
 #include <types.h>
+#include <parser.h>
 #include <lob.h>
 
 
@@ -56,14 +57,6 @@ TEST_F(OrderbookTest, RemoveOrderLevelRemoved) {
 }
 
 
-Ticker convertStringToTicker(const std::string& name) {
-    Ticker ticker{};
-    std::copy(name.begin(), 
-              name.begin() + std::min(name.length(), ticker.size()),
-              ticker.begin());
-    return ticker;
-} 
-
 TEST(TickerTest, ConvertStringTicker) {
     Ticker test_ticker{'A', 'A', 'P', 'L'};
     EXPECT_EQ(convertStringToTicker("AAPL"), test_ticker);
@@ -79,12 +72,6 @@ TEST(TickerTest, TickerKeyFunction) {
     EXPECT_EQ(ticker_key(test_ticker), 0x000000004C504141); // little-endian byte-order
 }
 
-
-Timestamp convertIntegerToTimestamp(const uint64_t value) {
-    Timestamp time{};
-    std::memcpy(time.data(), &value, std::min(sizeof(value), sizeof(time)));
-    return time;
-}
 
 TEST(TickerTest, ConvertIntToTimeStamp) {
     Timestamp time{0, 0, 0, 0, 255, 255};

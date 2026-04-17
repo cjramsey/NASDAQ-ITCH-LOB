@@ -91,7 +91,7 @@ void OrderbookManager::handle(const OrderReplaceMessage& msg) {
 
 void OrderbookManager::handle(const OrderExecutedMessage& msg) {
     // Using nests scope because inserting or removing keys invalidates references
-    uint64_t shares_remaining;
+    uint32_t shares_remaining;
     {
         Order& order{orders[msg.order_reference_number]};
 
@@ -108,7 +108,7 @@ void OrderbookManager::handle(const OrderExecutedMessage& msg) {
 }
 
 void OrderbookManager::handle(const OrderExecutedPriceMessage& msg) {
-    int shares_remaining;
+    uint32_t shares_remaining;
     {
         Order& order{orders[msg.order_reference_number]};
 

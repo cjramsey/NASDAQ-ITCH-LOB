@@ -7,6 +7,9 @@
 
 enum class Side : char { Buy = 'B', Sell = 'S' };
 
+using Ticker = std::array<char, 8>;
+using Timestamp = std::array<uint8_t, 6>;
+
 // Used in switch case/dispatch table for identifying message types
 namespace MessageType {
     constexpr char SystemEvent = 'S';
@@ -350,12 +353,20 @@ std::string parse_stock(const std::array<char, 8>& stock);
 
 // Printing declarations
 std::ostream& operator<<(std::ostream& os, const AddOrderMessage& msg);
-std::ostream& operator<<(std::ostream& os, const AddOrderMPIDAttributionMessage& msg);
-std::ostream& operator<<(std::ostream& os, const OrderExecutedMessage& msg);
-std::ostream& operator<<(std::ostream& os, const OrderExecutedPriceMessage& msg);
-std::ostream& operator<<(std::ostream& os, const OrderCancelMessage& msg);
-std::ostream& operator<<(std::ostream& os, const OrderDeleteMessage& msg);
-std::ostream& operator<<(std::ostream& os, const OrderReplaceMessage& msg);
+// std::ostream& operator<<(std::ostream& os, const AddOrderMPIDAttributionMessage& msg);
+// std::ostream& operator<<(std::ostream& os, const OrderExecutedMessage& msg);
+// std::ostream& operator<<(std::ostream& os, const OrderExecutedPriceMessage& msg);
+// std::ostream& operator<<(std::ostream& os, const OrderCancelMessage& msg);
+// std::ostream& operator<<(std::ostream& os, const OrderDeleteMessage& msg);
+// std::ostream& operator<<(std::ostream& os, const OrderReplaceMessage& msg);
+
+bool operator==(const AddOrderMessage& lhs, const AddOrderMessage& rhs);
+bool operator==(const AddOrderMPIDAttributionMessage& lhs, const AddOrderMPIDAttributionMessage& rhs);
+bool operator==(const OrderExecutedMessage& lhs, const OrderExecutedMessage& rhs);
+bool operator==(const OrderExecutedPriceMessage& lhs, const OrderExecutedPriceMessage& rhs);
+bool operator==(const OrderCancelMessage& lhs, const OrderCancelMessage& rhs);
+bool operator==(const OrderDeleteMessage& lhs, const OrderDeleteMessage& rhs);
+bool operator==(const OrderReplaceMessage& lhs, const OrderReplaceMessage& rhs);
 
 
 using Message = std::variant<

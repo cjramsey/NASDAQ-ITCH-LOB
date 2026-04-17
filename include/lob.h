@@ -9,9 +9,6 @@
 
 #include "types.h"
 
-using Ticker = std::array<char, 8>;
-using Timestamp = std::array<uint8_t, 6>;
-
 uint64_t ticker_key(const Ticker& t);
 
 struct Order {
