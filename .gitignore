@@ -5,6 +5,7 @@ ideas.txt
 *.NASDAQ_ITCH50
 
 .vscode
+.VSCodeCounter
 
 *.data
 

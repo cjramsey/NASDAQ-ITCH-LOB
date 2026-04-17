@@ -10,20 +10,24 @@
 #include "ring_buffer.h"
 
 
-int main()
+int main(int argc, char* argv[])
 {   
-    // const std::string path = "/mnt/d/01302020.NASDAQ_ITCH50";
-    const std::string path = "./data/sample100million.NASDAQ_ITCH50";
+    if (argc < 2) {
+        std::cout << "Usage: .program [path]\n";
+        return 0; 
+    }
+
+    const std::string path{argv[1]};
     ITCHReader reader{path};
     OrderbookManager orderbook_manager{};
     uint64_t counter{};
-    std::atomic<bool> running{true};
     auto start = std::chrono::high_resolution_clock::now();
 
 #ifdef USE_RING_BUFFER
 
     constexpr std::size_t N = 1 << 12;
     SPSCRingBuffer<N> ring_buffer{};
+    std::atomic<bool> running{true};
 
     auto ring_buffer_handler = [&ring_buffer](Message&& msg) {
         while (!ring_buffer.push(std::move(msg)));

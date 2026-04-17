@@ -22,12 +22,12 @@ foreach(TARGET direct ring_buffer direct_perf ring_buffer_perf)
     target_link_libraries(${TARGET} PRIVATE itch_lib)
 endforeach()
 
-target_compile_options(direct PRIVATE -O3)
-target_compile_options(ring_buffer PRIVATE -O3)
+target_compile_options(direct PRIVATE -O3 -march=native)
+target_compile_options(ring_buffer PRIVATE -O3 -march=native)
 target_compile_definitions(ring_buffer PRIVATE USE_RING_BUFFER)
 
-target_compile_options(direct_perf PRIVATE -O2 -g -fno-omit-frame-pointer)
-target_compile_options(ring_buffer_perf PRIVATE -O2 -g -fno-omit-frame-pointer)
+target_compile_options(direct_perf PRIVATE -O2 -g -fno-omit-frame-pointer -march=native)
+target_compile_options(ring_buffer_perf PRIVATE -O2 -g -fno-omit-frame-pointer -march=native)
 target_compile_definitions(ring_buffer_perf PRIVATE USE_RING_BUFFER)
 
 foreach(TARGET direct ring_buffer)
