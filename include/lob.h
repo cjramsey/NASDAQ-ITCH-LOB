@@ -38,6 +38,8 @@ public:
 
     ~Orderbook() = default;
 
+    void reset();
+
     void addOrder(uint32_t price, uint32_t shares, Side side);
     void removeOrder(uint32_t price, uint32_t shares, Side side);
 };
@@ -61,6 +63,8 @@ public:
     OrderbookManager& operator=(const OrderbookManager&) = delete;
 
     void process(const Message& msg);
+
+    void reset();
 
     // Consider to protected and implement setter/getter methods for encapsulation
     std::unordered_map<uint64_t, Orderbook> books;

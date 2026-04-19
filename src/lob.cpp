@@ -149,3 +149,13 @@ void Orderbook::removeOrder(uint32_t price, uint32_t shares, Side side) {
             asks.erase(price);
     }
 }
+
+void Orderbook::reset() {
+    bids.clear();
+    asks.clear();
+}
+
+void OrderbookManager::reset() {
+    orders.clear();
+    books.clear();
+}

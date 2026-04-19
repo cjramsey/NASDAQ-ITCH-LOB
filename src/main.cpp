@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     std::cout << "Messages: " << counter << '\n';
     std::cout << "Time: " << duration << "ms\n";
     std::cout << "Throughput: " << (counter * 1000) / duration << " msg/s\n";
-    std::cout << "Efficiency: " << (duration_ns / counter) << " ns/msg\n"; 
+    std::cout << "Efficiency: " << ((counter > 0) ? (duration_ns / counter) : 0) << " ns/msg\n"; 
 
     return 0;
 }

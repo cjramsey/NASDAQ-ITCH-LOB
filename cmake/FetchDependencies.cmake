@@ -20,5 +20,6 @@ FetchContent_Declare(
 
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
 set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 
 FetchContent_MakeAvailable(googletest benchmark unordered_dense)
