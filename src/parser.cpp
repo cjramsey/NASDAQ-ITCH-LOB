@@ -1,42 +1,39 @@
 #include <algorithm>
 #include <cstring>
 #include <cassert>
+#include <type_traits>
 #include <vector>
 
 #include "types.h"
 #include "parser.h"
 #include "lob.h"
 
+namespace {
+    template <typename T>
+    T read_field(const std::byte*& cursor) {
+        T val;
+        std::memcpy(&val, cursor, sizeof(T));
+        cursor += sizeof(T);
+
+        if constexpr (std::is_same_v<T, uint16_t>) val = be16toh(val);
+        else if constexpr (std::is_same_v<T, uint32_t>) val = be32toh(val);
+        else if constexpr (std::is_same_v<T, uint64_t>) val = be64toh(val);
+
+        return val;
+    }
+}
+
 AddOrderMessage parser::parse_add_order(const std::byte* cursor) {
     AddOrderMessage msg;
 
-    std::memcpy(&msg.stock_locate, cursor, sizeof(msg.stock_locate));
-    msg.stock_locate = be16toh(msg.stock_locate);
-    cursor += sizeof(msg.stock_locate);
-
-    std::memcpy(&msg.tracking_number, cursor, sizeof(msg.tracking_number));
-    msg.tracking_number = be16toh(msg.tracking_number);
-    cursor += sizeof(msg.tracking_number);
-
-    std::memcpy(msg.timestamp.data(), cursor, sizeof(msg.timestamp));
-    cursor += sizeof(msg.timestamp);
-
-    std::memcpy(&msg.order_reference_number, cursor, sizeof(msg.order_reference_number));
-    msg.order_reference_number = be64toh(msg.order_reference_number);
-    cursor += sizeof(msg.order_reference_number);
-
-    std::memcpy(&msg.side, cursor, sizeof(msg.side));
-    cursor += sizeof(msg.side);
-
-    std::memcpy(&msg.shares, cursor, sizeof(msg.shares));
-    msg.shares = be32toh(msg.shares);
-    cursor += sizeof(msg.shares);
-
-    std::memcpy(msg.stock.data(), cursor, sizeof(msg.stock));
-    cursor += sizeof(msg.stock);
-
-    std::memcpy(&msg.price, cursor, sizeof(msg.price));
-    msg.price = be32toh(msg.price);
+    msg.stock_locate = read_field<uint16_t>(cursor);
+    msg.tracking_number = read_field<uint16_t>(cursor);
+    msg.timestamp = read_field<Timestamp>(cursor);
+    msg.order_reference_number = read_field<uint64_t>(cursor);
+    msg.side = read_field<Side>(cursor);
+    msg.shares = read_field<uint32_t>(cursor);
+    msg.stock = read_field<Ticker>(cursor);
+    msg.price = read_field<uint32_t>(cursor);
 
     return msg;
 }
@@ -44,37 +41,15 @@ AddOrderMessage parser::parse_add_order(const std::byte* cursor) {
 AddOrderMPIDAttributionMessage parser::parse_add_order_mpid(const std::byte* cursor) {
     AddOrderMPIDAttributionMessage msg;
 
-    std::memcpy(&msg.stock_locate, cursor, sizeof(msg.stock_locate));
-    msg.stock_locate = be16toh(msg.stock_locate);
-    cursor += sizeof(msg.stock_locate);
-
-    std::memcpy(&msg.tracking_number, cursor, sizeof(msg.tracking_number));
-    msg.tracking_number = be16toh(msg.tracking_number);
-    cursor += sizeof(msg.tracking_number);
-
-    std::memcpy(msg.timestamp.data(), cursor, sizeof(msg.timestamp));
-    cursor += sizeof(msg.timestamp);
-
-    std::memcpy(&msg.order_reference_number, cursor, sizeof(msg.order_reference_number));
-    msg.order_reference_number = be64toh(msg.order_reference_number);
-    cursor += sizeof(msg.order_reference_number);
-
-    std::memcpy(&msg.side, cursor, sizeof(msg.side));
-    cursor += sizeof(msg.side);
-
-    std::memcpy(&msg.shares, cursor, sizeof(msg.shares));
-    msg.shares = be32toh(msg.shares);
-    cursor += sizeof(msg.shares);
-
-    std::memcpy(msg.stock.data(), cursor, sizeof(msg.stock));
-    cursor += sizeof(msg.stock);
-
-    std::memcpy(&msg.price, cursor, sizeof(msg.price));
-    msg.price = be32toh(msg.price);
-    cursor += sizeof(msg.price);
-
-    std::memcpy(&msg.MPID, cursor, sizeof(msg.MPID));
-    msg.MPID = be32toh(msg.MPID);
+    msg.stock_locate = read_field<uint16_t>(cursor);
+    msg.tracking_number = read_field<uint16_t>(cursor);
+    msg.timestamp = read_field<Timestamp>(cursor);
+    msg.order_reference_number = read_field<uint64_t>(cursor);
+    msg.side = read_field<Side>(cursor);
+    msg.shares = read_field<uint32_t>(cursor);
+    msg.stock = read_field<Ticker>(cursor);
+    msg.price = read_field<uint32_t>(cursor);
+    msg.MPID = read_field<uint32_t>(cursor);
 
     return msg;
 }
@@ -82,27 +57,12 @@ AddOrderMPIDAttributionMessage parser::parse_add_order_mpid(const std::byte* cur
 OrderExecutedMessage parser::parse_order_executed(const std::byte* cursor) {
     OrderExecutedMessage msg;
 
-    std::memcpy(&msg.stock_locate, cursor, sizeof(msg.stock_locate));
-    msg.stock_locate = be16toh(msg.stock_locate);
-    cursor += sizeof(msg.stock_locate);
-
-    std::memcpy(&msg.tracking_number, cursor, sizeof(msg.tracking_number));
-    msg.tracking_number = be16toh(msg.tracking_number);
-    cursor += sizeof(msg.tracking_number);
-
-    std::memcpy(msg.timestamp.data(), cursor, sizeof(msg.timestamp));
-    cursor += sizeof(msg.timestamp);
-
-    std::memcpy(&msg.order_reference_number, cursor, sizeof(msg.order_reference_number));
-    msg.order_reference_number = be64toh(msg.order_reference_number);
-    cursor += sizeof(msg.order_reference_number);
-
-    std::memcpy(&msg.executed_shares, cursor, sizeof(msg.executed_shares));
-    msg.executed_shares = be32toh(msg.executed_shares);
-    cursor += sizeof(msg.executed_shares);
-
-    std::memcpy(&msg.match_number, cursor, sizeof(msg.match_number));
-    msg.match_number = be64toh(msg.match_number);
+    msg.stock_locate = read_field<uint16_t>(cursor);
+    msg.tracking_number = read_field<uint16_t>(cursor);
+    msg.timestamp = read_field<Timestamp>(cursor);
+    msg.order_reference_number = read_field<uint64_t>(cursor);
+    msg.executed_shares = read_field<uint32_t>(cursor);
+    msg.match_number = read_field<uint64_t>(cursor);
 
     return msg;
 };
@@ -110,34 +70,14 @@ OrderExecutedMessage parser::parse_order_executed(const std::byte* cursor) {
 OrderExecutedPriceMessage parser::parse_order_executed_price(const std::byte* cursor) {
     OrderExecutedPriceMessage msg;
 
-    std::memcpy(&msg.stock_locate, cursor, sizeof(msg.stock_locate));
-    msg.stock_locate = be16toh(msg.stock_locate);
-    cursor += sizeof(msg.stock_locate);
-
-    std::memcpy(&msg.tracking_number, cursor, sizeof(msg.tracking_number));
-    msg.tracking_number = be16toh(msg.tracking_number);
-    cursor += sizeof(msg.tracking_number);
-
-    std::memcpy(msg.timestamp.data(), cursor, sizeof(msg.timestamp));
-    cursor += sizeof(msg.timestamp);
-
-    std::memcpy(&msg.order_reference_number, cursor, sizeof(msg.order_reference_number));
-    msg.order_reference_number = be64toh(msg.order_reference_number);
-    cursor += sizeof(msg.order_reference_number);
-
-    std::memcpy(&msg.executed_shares, cursor, sizeof(msg.executed_shares));
-    msg.executed_shares = be32toh(msg.executed_shares);
-    cursor += sizeof(msg.executed_shares);
-
-    std::memcpy(&msg.match_number, cursor, sizeof(msg.match_number));
-    msg.match_number = be64toh(msg.match_number);
-    cursor += sizeof(msg.match_number);
-
-    std::memcpy(&msg.printable, cursor, sizeof(msg.printable));
-    cursor += sizeof(msg.printable);
-
-    std::memcpy(&msg.execution_price, cursor, sizeof(msg.execution_price));
-    msg.execution_price = be32toh(msg.execution_price);
+    msg.stock_locate = read_field<uint16_t>(cursor);
+    msg.tracking_number = read_field<uint16_t>(cursor);
+    msg.timestamp = read_field<Timestamp>(cursor);
+    msg.order_reference_number = read_field<uint64_t>(cursor);
+    msg.executed_shares = read_field<uint32_t>(cursor);
+    msg.match_number = read_field<uint64_t>(cursor);
+    msg.printable = read_field<char>(cursor);
+    msg.execution_price = read_field<uint32_t>(cursor);
 
     return msg;
 };
@@ -145,23 +85,11 @@ OrderExecutedPriceMessage parser::parse_order_executed_price(const std::byte* cu
 OrderCancelMessage parser::parse_order_cancel(const std::byte* cursor) {
     OrderCancelMessage msg;
 
-    std::memcpy(&msg.stock_locate, cursor, sizeof(msg.stock_locate));
-    msg.stock_locate = be16toh(msg.stock_locate);
-    cursor += sizeof(msg.stock_locate);
-
-    std::memcpy(&msg.tracking_number, cursor, sizeof(msg.tracking_number));
-    msg.tracking_number = be16toh(msg.tracking_number);
-    cursor += sizeof(msg.tracking_number);
-
-    std::memcpy(msg.timestamp.data(), cursor, sizeof(msg.timestamp));
-    cursor += sizeof(msg.timestamp);
-
-    std::memcpy(&msg.order_reference_number, cursor, sizeof(msg.order_reference_number));
-    msg.order_reference_number = be64toh(msg.order_reference_number);
-    cursor += sizeof(msg.order_reference_number);
-
-    std::memcpy(&msg.cancelled_shares, cursor, sizeof(msg.cancelled_shares));
-    msg.cancelled_shares = be32toh(msg.cancelled_shares);
+    msg.stock_locate = read_field<uint16_t>(cursor);
+    msg.tracking_number = read_field<uint16_t>(cursor);
+    msg.timestamp = read_field<Timestamp>(cursor);
+    msg.order_reference_number = read_field<uint64_t>(cursor);
+    msg.cancelled_shares = read_field<uint32_t>(cursor);
 
     return msg;
 };
@@ -169,52 +97,24 @@ OrderCancelMessage parser::parse_order_cancel(const std::byte* cursor) {
 OrderDeleteMessage parser::parse_order_delete(const std::byte* cursor) {
     OrderDeleteMessage msg;
 
-    std::memcpy(&msg.stock_locate, cursor, sizeof(msg.stock_locate));
-    msg.stock_locate = be16toh(msg.stock_locate);
-    cursor += sizeof(msg.stock_locate);
-
-    std::memcpy(&msg.tracking_number, cursor, sizeof(msg.tracking_number));
-    msg.tracking_number = be16toh(msg.tracking_number);
-    cursor += sizeof(msg.tracking_number);
-
-    std::memcpy(msg.timestamp.data(), cursor, sizeof(msg.timestamp));
-    cursor += sizeof(msg.timestamp);
-
-    std::memcpy(&msg.order_reference_number, cursor, sizeof(msg.order_reference_number));
-    msg.order_reference_number = be64toh(msg.order_reference_number);
-    cursor += sizeof(msg.order_reference_number);
+    msg.stock_locate = read_field<uint16_t>(cursor);
+    msg.tracking_number = read_field<uint16_t>(cursor);
+    msg.timestamp = read_field<Timestamp>(cursor);
+    msg.order_reference_number = read_field<uint64_t>(cursor);
 
     return msg;
 };
 
 OrderReplaceMessage parser::parse_order_replace(const std::byte* cursor) {
     OrderReplaceMessage msg;
-    
-    std::memcpy(&msg.stock_locate, cursor, sizeof(msg.stock_locate));
-    msg.stock_locate = be16toh(msg.stock_locate);
-    cursor += sizeof(msg.stock_locate);
 
-    std::memcpy(&msg.tracking_number, cursor, sizeof(msg.tracking_number));
-    msg.tracking_number = be16toh(msg.tracking_number);
-    cursor += sizeof(msg.tracking_number);
-
-    std::memcpy(msg.timestamp.data(), cursor, sizeof(msg.timestamp));
-    cursor += sizeof(msg.timestamp);
-
-    std::memcpy(&msg.original_order_reference_number, cursor, sizeof(msg.original_order_reference_number));
-    msg.original_order_reference_number = be64toh(msg.original_order_reference_number);
-    cursor += sizeof(msg.original_order_reference_number);
-
-    std::memcpy(&msg.new_order_reference_number, cursor, sizeof(msg.new_order_reference_number));
-    msg.new_order_reference_number = be64toh(msg.new_order_reference_number);
-    cursor += sizeof(msg.new_order_reference_number);
-
-    std::memcpy(&msg.shares, cursor, sizeof(msg.shares));
-    msg.shares = be32toh(msg.shares);
-    cursor += sizeof(msg.shares);
-
-    std::memcpy(&msg.price, cursor, sizeof(msg.price));
-    msg.price = be32toh(msg.price);
+    msg.stock_locate = read_field<uint16_t>(cursor);
+    msg.tracking_number = read_field<uint16_t>(cursor);
+    msg.timestamp = read_field<Timestamp>(cursor);
+    msg.original_order_reference_number = read_field<uint64_t>(cursor);
+    msg.new_order_reference_number = read_field<uint64_t>(cursor);
+    msg.shares = read_field<uint32_t>(cursor);
+    msg.price = read_field<uint32_t>(cursor);
 
     return msg;
 };
@@ -235,7 +135,78 @@ void ITCHReader::read_messages(std::function<void(Message&& msg)> process, uint6
     std::array<std::byte, BUFFER_SIZE> buffer;
     std::byte* cursor = buffer.data();
     std::byte* buf_end = buffer.data();
-    
+
+    // Decodes one message at cursor (length prefix + type byte already known to be present)
+    // and advances cursor past it. Shared by the lazy in-stream loop and the exact
+    // end-of-file drain below so the dispatch switch isn't duplicated between them.
+    auto process_next_message = [&process, &counter](std::byte*& cursor) {
+        // Byte order for NASDAQ sample files is big-endian
+        // First two bytes represent the length of the next message
+        uint16_t len_be;
+        std::memcpy(&len_be, cursor, LENGTH_BYTES);
+        uint16_t len = be16toh(len_be);
+
+        cursor += LENGTH_BYTES;
+
+        // Next byte is a char representing the type of message
+        // Endianness does not matter for single bytes
+        uint8_t message_type = std::to_integer<uint8_t>(*cursor);
+
+        ++cursor;
+
+        // Consider changing switch statement to dispatch table to fix branch misses if bottleneck
+        // Only actively processing add, execute, replace, cancel, delete messages
+        switch (message_type)
+        {
+            case MessageType::AddOrder:
+            {
+                AddOrderMessage msg = parser::parse_add_order(cursor);
+                process(msg);
+                break;
+            }
+            case MessageType::AddOrderMPIDAttribution:
+            {
+                AddOrderMPIDAttributionMessage msg = parser::parse_add_order_mpid(cursor);
+                process(msg);
+                break;
+            }
+            case MessageType::OrderExecuted:
+            {
+                OrderExecutedMessage msg = parser::parse_order_executed(cursor);
+                process(msg);
+                break;
+            }
+            case MessageType::OrderExecutedPrice:
+            {
+                OrderExecutedPriceMessage msg = parser::parse_order_executed_price(cursor);
+                process(msg);
+                break;
+            }
+            case MessageType::OrderCancel:
+            {
+                OrderCancelMessage msg = parser::parse_order_cancel(cursor);
+                process(msg);
+                break;
+            }
+            case MessageType::OrderDelete:
+            {
+                OrderDeleteMessage msg = parser::parse_order_delete(cursor);
+                process(msg);
+                break;
+            }
+            case MessageType::OrderReplace:
+            {
+                OrderReplaceMessage msg = parser::parse_order_replace(cursor);
+                process(msg);
+                break;
+            }
+            default:
+                break;
+        }
+        ++counter;
+        cursor += len - 1;  // Move cursor to first byte of next message
+    };
+
     while (true)
     {
         // Move leftover unread bytes at the end of the buffer to the start
@@ -248,79 +219,31 @@ void ITCHReader::read_messages(std::function<void(Message&& msg)> process, uint6
         // Fill the remainder of the buffer
         file.read(reinterpret_cast<char*>(buf_end), BUFFER_SIZE - leftover);
         std::size_t bytes_read = file.gcount();
-        if (bytes_read == 0) 
+        if (bytes_read == 0)
+        {
+            // End of file: no further reads will bring in the rest of a message, so drain
+            // whatever complete messages remain exactly, without the lazy MAX_MSG_SIZE
+            // margin below (which assumes more data may still arrive).
+            while (cursor + LENGTH_BYTES <= buf_end)
+            {
+                uint16_t len_be;
+                std::memcpy(&len_be, cursor, LENGTH_BYTES);
+                uint16_t len = be16toh(len_be);
+
+                if (cursor + LENGTH_BYTES + len > buf_end)
+                    break; // trailing partial message, nothing more can be decoded
+
+                process_next_message(cursor);
+            }
             break;
+        }
         buf_end += bytes_read;
 
         // Stop once the cursor is within the maximum message length + bytes for the length
         // We lose out on at most 2-3 messages per iteration through the buffer using this lazier stopping criterion
         while (cursor + MAX_MSG_SIZE + LENGTH_BYTES <= buf_end)
         {
-            // Byte order for NASDAQ sample files is big-endian
-            // First two bytes represent the length of the next message
-            uint16_t len_be;
-            std::memcpy(&len_be, cursor, LENGTH_BYTES);
-            uint16_t len = be16toh(len_be);
-
-            cursor += LENGTH_BYTES;
-            
-            // Next byte is a char representing the type of message
-            // Endianness does not matter for single bytes
-            uint8_t message_type = std::to_integer<uint8_t>(*cursor);
-
-            ++cursor;
-            
-            // Consider changing switch statement to dispatch table to fix branch misses if bottleneck
-            // Only actively processing add, execute, replace, cancel, delete messages
-            switch (message_type)
-            {
-                case MessageType::AddOrder:
-                {
-                    AddOrderMessage msg = parser::parse_add_order(cursor);
-                    process(msg);
-                    break;
-                }
-                case MessageType::AddOrderMPIDAttribution:
-                {
-                    AddOrderMPIDAttributionMessage msg = parser::parse_add_order_mpid(cursor);
-                    process(msg);
-                    break;
-                }
-                case MessageType::OrderExecuted:
-                {
-                    OrderExecutedMessage msg = parser::parse_order_executed(cursor);
-                    process(msg);
-                    break;
-                }
-                case MessageType::OrderExecutedPrice:
-                {
-                    OrderExecutedPriceMessage msg = parser::parse_order_executed_price(cursor);
-                    process(msg);
-                    break;
-                }
-                case MessageType::OrderCancel:
-                {
-                    OrderCancelMessage msg = parser::parse_order_cancel(cursor);
-                    process(msg);
-                    break;
-                }
-                case MessageType::OrderDelete:
-                {
-                    OrderDeleteMessage msg = parser::parse_order_delete(cursor);
-                    process(msg);
-                    break;
-                }
-                case MessageType::OrderReplace:
-                {
-                    OrderReplaceMessage msg = parser::parse_order_replace(cursor);
-                    process(msg);
-                    break;
-                }
-                default:
-                    break;
-            }
-            ++counter;
-            cursor += len - 1;  // Move cursor to first byte of next message
+            process_next_message(cursor);
         }
     }
 };

@@ -349,16 +349,14 @@ static_assert(sizeof(DirectListingCapitalRaiseMessage) == MessageLength<MessageT
 
 uint64_t parse_timestamp(const std::array<uint8_t, 6>& timestamp);
 
-std::string parse_stock(const std::array<char, 8>& stock);
-
 // Printing declarations
 std::ostream& operator<<(std::ostream& os, const AddOrderMessage& msg);
-// std::ostream& operator<<(std::ostream& os, const AddOrderMPIDAttributionMessage& msg);
-// std::ostream& operator<<(std::ostream& os, const OrderExecutedMessage& msg);
-// std::ostream& operator<<(std::ostream& os, const OrderExecutedPriceMessage& msg);
-// std::ostream& operator<<(std::ostream& os, const OrderCancelMessage& msg);
-// std::ostream& operator<<(std::ostream& os, const OrderDeleteMessage& msg);
-// std::ostream& operator<<(std::ostream& os, const OrderReplaceMessage& msg);
+std::ostream& operator<<(std::ostream& os, const AddOrderMPIDAttributionMessage& msg);
+std::ostream& operator<<(std::ostream& os, const OrderExecutedMessage& msg);
+std::ostream& operator<<(std::ostream& os, const OrderExecutedPriceMessage& msg);
+std::ostream& operator<<(std::ostream& os, const OrderCancelMessage& msg);
+std::ostream& operator<<(std::ostream& os, const OrderDeleteMessage& msg);
+std::ostream& operator<<(std::ostream& os, const OrderReplaceMessage& msg);
 
 bool operator==(const AddOrderMessage& lhs, const AddOrderMessage& rhs);
 bool operator==(const AddOrderMPIDAttributionMessage& lhs, const AddOrderMPIDAttributionMessage& rhs);

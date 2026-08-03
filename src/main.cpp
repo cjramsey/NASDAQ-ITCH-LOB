@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 
     const std::string path{argv[1]};
     ITCHReader reader{path};
-    OrderbookManager orderbook_manager{};
+    OrderbookManager<FastOrderbook> orderbook_manager{};
     uint64_t counter{};
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 
     std::cout << "Messages: " << counter << '\n';
     std::cout << "Time: " << duration << "ms\n";
-    std::cout << "Throughput: " << (counter * 1000) / duration << " msg/s\n";
+    std::cout << "Throughput: " << ((duration > 0) ? (counter * 1000) / duration : 0) << " msg/s\n";
     std::cout << "Efficiency: " << ((counter > 0) ? (duration_ns / counter) : 0) << " ns/msg\n"; 
 
     return 0;
