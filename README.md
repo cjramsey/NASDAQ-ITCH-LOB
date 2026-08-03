@@ -196,8 +196,11 @@ ctest --test-dir build --output-on-failure
 ## Roadmap
  
 - [ ] Arena/pool allocator for `Order` objects to improve spatial locality at scale
-- [ ] Investigate flat sorted price-level representation vs `unordered_map` at shallow book depths
+- [X] Investigate flat sorted price-level representation vs `unordered_map` at shallow book depths — implemented as `BBOOrderbook`, benchmarked side by side with the original `unordered_map`-backed `FastOrderbook`
 - [ ] Top-of-book BBO output stream
+- [ ] Persist L2 order book data over time, split into logical files by event type (adds/deletes/modifies/etc.) in Parquet/Arrow
+- [ ] Data analysis on the persisted data in Python (polars)
+- [ ] Reconstruct L3 order book data (full per-order detail, not just aggregated price levels)
  
 
 ## References

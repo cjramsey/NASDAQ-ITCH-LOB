@@ -40,11 +40,12 @@ BENCHMARK_CAPTURE(BM_ParseOnly, 1_billion, std::string("./data/sample1billion.NA
 
 // Orderbook benchmarks
 
+template <typename OrderbookT_>
 static void BM_ParseAndUpdateLOB(benchmark::State& state, std::string path) {
     for (auto _ : state) {
         state.PauseTiming();
         ITCHReader reader{path};
-        OrderbookManager manager{};
+        OrderbookManager<OrderbookT_> manager{};
         uint64_t counter{};
         state.ResumeTiming();
 
@@ -66,17 +67,20 @@ static void BM_ParseAndUpdateLOB(benchmark::State& state, std::string path) {
                            benchmark::Counter::kIsRate |
                            benchmark::Counter::kInvert);
 }
-BENCHMARK_CAPTURE(BM_ParseAndUpdateLOB, 10_million, std::string("./data/sample10million.NASDAQ_ITCH50"));
-BENCHMARK_CAPTURE(BM_ParseAndUpdateLOB, 100_million, std::string("./data/sample100million.NASDAQ_ITCH50"));
-BENCHMARK_CAPTURE(BM_ParseAndUpdateLOB, 1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
+BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, FastOrderbook, Fast_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"));
+BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, FastOrderbook, Fast_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"));
+BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, FastOrderbook, Fast_1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
+BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, BBOOrderbook, BBO_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"));
+BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, BBOOrderbook, BBO_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"));
+BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, BBOOrderbook, BBO_1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
 
 
-template <std::size_t N>
+template <std::size_t N, typename OrderbookT_>
 static void BM_RingBuffer(benchmark::State& state, std::string path) {
     for (auto _ : state) {
         state.PauseTiming();
         ITCHReader reader{path};
-        OrderbookManager manager{};
+        OrderbookManager<OrderbookT_> manager{};
         uint64_t counter{};
 
         SPSCRingBuffer<N> ring_buffer{};
@@ -118,8 +122,11 @@ static void BM_RingBuffer(benchmark::State& state, std::string path) {
                         benchmark::Counter::kIsRate |
                         benchmark::Counter::kInvert);
 }
-BENCHMARK_CAPTURE(BM_RingBuffer<1 << 12>, 10_million, std::string("./data/sample10million.NASDAQ_ITCH50"))->Iterations(100);
-BENCHMARK_CAPTURE(BM_RingBuffer<1 << 12>, 100_million, std::string("./data/sample100million.NASDAQ_ITCH50"))->Iterations(100);
-BENCHMARK_CAPTURE(BM_RingBuffer<1 << 12>, 1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, FastOrderbook>), Fast_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"))->Iterations(100);
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, FastOrderbook>), Fast_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"))->Iterations(100);
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, FastOrderbook>), Fast_1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, BBOOrderbook>), BBO_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"))->Iterations(100);
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, BBOOrderbook>), BBO_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"))->Iterations(100);
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, BBOOrderbook>), BBO_1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
 
 BENCHMARK_MAIN();
