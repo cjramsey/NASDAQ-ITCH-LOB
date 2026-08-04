@@ -2,7 +2,25 @@
 #include <parser.h>
 #include <lob.h>
 #include <ring_buffer.h>
+#include <filesystem>
 #include <thread>
+
+// Sets the standard set of throughput/latency counters shared by every
+// benchmark below: messages/sec, ns/msg, and bytes/sec (native Benchmark
+// column, driven off the input file size).
+static void SetThroughputCounters(benchmark::State& state, const std::string& path) {
+    state.counters["msg/s"] =
+        benchmark::Counter(state.counters["Messages"],
+                           benchmark::Counter::kIsRate);
+
+    state.counters["ns/msg"] =
+        benchmark::Counter(state.counters["Messages"],
+                           benchmark::Counter::kIsRate |
+                           benchmark::Counter::kInvert);
+
+    state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) *
+                             static_cast<int64_t>(std::filesystem::file_size(path)));
+}
 
 // Parser benchmarks
 
@@ -21,20 +39,12 @@ static void BM_ParseOnly(benchmark::State& state, std::string path) {
         state.counters["Messages"] += counter;
     }
 
-    // Throughput: messages per second
-    state.counters["msg/s"] =
-        benchmark::Counter(state.counters["Messages"],
-                           benchmark::Counter::kIsRate);
-
-    // Latency: nanoseconds per message
-    state.counters["ns/msg"] =
-        benchmark::Counter(state.counters["Messages"],
-                           benchmark::Counter::kIsRate |
-                           benchmark::Counter::kInvert);
-
+    SetThroughputCounters(state, path);
 }
-BENCHMARK_CAPTURE(BM_ParseOnly, 10_million, std::string("./data/sample10million.NASDAQ_ITCH50"));
-BENCHMARK_CAPTURE(BM_ParseOnly, 100_million, std::string("./data/sample100million.NASDAQ_ITCH50"));
+BENCHMARK_CAPTURE(BM_ParseOnly, 10_million, std::string("./data/sample10million.NASDAQ_ITCH50"))
+    ->Repetitions(5)->ReportAggregatesOnly(true);
+BENCHMARK_CAPTURE(BM_ParseOnly, 100_million, std::string("./data/sample100million.NASDAQ_ITCH50"))
+    ->Repetitions(5)->ReportAggregatesOnly(true);
 BENCHMARK_CAPTURE(BM_ParseOnly, 1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
 
 
@@ -58,20 +68,17 @@ static void BM_ParseAndUpdateLOB(benchmark::State& state, std::string path) {
         state.counters["Messages"] += counter;
     }
 
-    state.counters["msg/s"] =
-        benchmark::Counter(state.counters["Messages"],
-                           benchmark::Counter::kIsRate);
-
-    state.counters["ns/msg"] =
-        benchmark::Counter(state.counters["Messages"],
-                           benchmark::Counter::kIsRate |
-                           benchmark::Counter::kInvert);
+    SetThroughputCounters(state, path);
 }
-BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, FastOrderbook, Fast_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"));
-BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, FastOrderbook, Fast_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"));
+BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, FastOrderbook, Fast_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"))
+    ->Repetitions(5)->ReportAggregatesOnly(true);
+BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, FastOrderbook, Fast_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"))
+    ->Repetitions(5)->ReportAggregatesOnly(true);
 BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, FastOrderbook, Fast_1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
-BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, BBOOrderbook, BBO_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"));
-BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, BBOOrderbook, BBO_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"));
+BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, BBOOrderbook, BBO_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"))
+    ->Repetitions(5)->ReportAggregatesOnly(true);
+BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, BBOOrderbook, BBO_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"))
+    ->Repetitions(5)->ReportAggregatesOnly(true);
 BENCHMARK_TEMPLATE1_CAPTURE(BM_ParseAndUpdateLOB, BBOOrderbook, BBO_1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
 
 
@@ -113,20 +120,22 @@ static void BM_RingBuffer(benchmark::State& state, std::string path) {
 
         state.counters["Messages"] += counter;
     }
-    state.counters["msg/s"] =
-        benchmark::Counter(state.counters["Messages"],
-                           benchmark::Counter::kIsRate);
-    
-    state.counters["ns/msg"] =
-        benchmark::Counter(state.counters["Messages"],
-                        benchmark::Counter::kIsRate |
-                        benchmark::Counter::kInvert);
+
+    SetThroughputCounters(state, path);
 }
-BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, FastOrderbook>), Fast_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"))->Iterations(100);
-BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, FastOrderbook>), Fast_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"))->Iterations(100);
-BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, FastOrderbook>), Fast_1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
-BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, BBOOrderbook>), BBO_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"))->Iterations(100);
-BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, BBOOrderbook>), BBO_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"))->Iterations(100);
-BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, BBOOrderbook>), BBO_1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5);
+// UseRealTime(): the actual parse/process work happens on spawned threads,
+// not the calling (benchmark) thread, so CPU time (Benchmark's default rate
+// denominator) is nearly zero here — it would make msg/s, ns/msg, and
+// bytes_per_second meaningless. Wall-clock time is what's real.
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, FastOrderbook>), Fast_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"))
+    ->Iterations(100)->Repetitions(5)->ReportAggregatesOnly(true)->UseRealTime();
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, FastOrderbook>), Fast_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"))
+    ->Iterations(100)->Repetitions(5)->ReportAggregatesOnly(true)->UseRealTime();
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, FastOrderbook>), Fast_1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5)->UseRealTime();
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, BBOOrderbook>), BBO_10_million, std::string("./data/sample10million.NASDAQ_ITCH50"))
+    ->Iterations(100)->Repetitions(5)->ReportAggregatesOnly(true)->UseRealTime();
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, BBOOrderbook>), BBO_100_million, std::string("./data/sample100million.NASDAQ_ITCH50"))
+    ->Iterations(100)->Repetitions(5)->ReportAggregatesOnly(true)->UseRealTime();
+BENCHMARK_CAPTURE((BM_RingBuffer<1 << 12, BBOOrderbook>), BBO_1_billion, std::string("./data/sample1billion.NASDAQ_ITCH50"))->Iterations(5)->UseRealTime();
 
 BENCHMARK_MAIN();
