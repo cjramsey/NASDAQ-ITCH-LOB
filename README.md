@@ -43,9 +43,9 @@ Measured on an Intel Core i7-1165G7 @ 2.80 GHz, 16GB RAM, `-O3 -march=native` wi
 |---|---|---|---|---|
 | Parse only | 5.8 ns/msg | 9.4 ns/msg | 13.5 ns/msg | — |
 | Parse + LOB update (`FastOrderbook`) | 29.2 ns/msg | 79.1 ns/msg | 219.0 ns/msg | 320 ns/msg |
-| Parse + LOB update (`BBOOrderbook`) | 27.8 ns/msg | 73.4 ns/msg | 181.0 ns/msg | — |
+| Parse + LOB update (`BBOOrderbook`) | 27.8 ns/msg | 73.4 ns/msg | 181.0 ns/msg | 316ns/msg |
 | Ring buffer pipeline (`FastOrderbook`) | 42.9 ns/msg | 134.5 ns/msg | 297.7 ns/msg | 426 ns/msg |
-| Ring buffer pipeline (`BBOOrderbook`) | 48.6 ns/msg | 137.0 ns/msg | 255.4 ns/msg | — |
+| Ring buffer pipeline (`BBOOrderbook`) | 48.6 ns/msg | 137.0 ns/msg | 255.4 ns/msg | 396ns/msg |
 
 Latency grows with dataset size on every LOB-touching benchmark as the order index and price maps outgrow L2/L3 cache; decode-only parsing stays flat since it never touches those structures. The ring buffer is slower than direct processing at every tier — synchronisation overhead outweighs the pipelining benefit here.
 
