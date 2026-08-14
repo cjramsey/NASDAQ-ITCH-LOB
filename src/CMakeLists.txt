@@ -1,5 +1,6 @@
 file(GLOB_RECURSE LIB_SOURCES "*.cpp")
 list(FILTER LIB_SOURCES EXCLUDE REGEX ".*main\\.cpp$")
+list(FILTER LIB_SOURCES EXCLUDE REGEX ".*parquet_export/.*")
 
 add_library(itch_lib STATIC ${LIB_SOURCES})
 target_include_directories(itch_lib PUBLIC ${PROJECT_SOURCE_DIR}/include)

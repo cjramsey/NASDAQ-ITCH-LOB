@@ -3,6 +3,7 @@ ideas.txt
 /build*
 
 results/
+out/
 
 *.NASDAQ_ITCH50
 

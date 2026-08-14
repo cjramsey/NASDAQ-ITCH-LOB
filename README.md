@@ -21,9 +21,10 @@ A C++23 NASDAQ TotalView-ITCH 5.0 binary feed parser with full limit order book 
 5. [Message Handling](#message--handling)
 6. [Build](#build)
 7. [Usage](#usage)
-8. [Testing](#testing)
-9. [Roadmap](#roadmap)
-10. [References](#references)
+8. [Parquet Export (optional)](#parquet-export-optional)
+9. [Testing](#testing)
+10. [Roadmap](#roadmap)
+11. [References](#references)
 
  
 ## Overview
@@ -203,6 +204,38 @@ Efficiency: <ns/msg>
 ```
 
 
+## Parquet Export (optional)
+
+A separate `itch_to_parquet` tool decodes an ITCH file and writes one Parquet
+file per message type — add/execute/cancel/delete/replace, plus trades — for
+ analysis (e.g. with polars). It requires Arrow/Parquet to already be installed.
+
+**Install Arrow/Parquet (one-time):**
+
+```bash
+curl -fsSLo /tmp/arrow.deb "https://packages.apache.org/artifactory/arrow/ubuntu/apache-arrow-apt-source-latest-$(lsb_release -cs).deb" && sudo apt install -y -V /tmp/arrow.deb
+sudo apt update && sudo apt install -y -V libarrow-dev libparquet-dev
+```
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_PARQUET_EXPORT=ON
+cmake --build build --target itch_to_parquet --parallel
+```
+
+```bash
+./build/itch_to_parquet [input-file] [output-dir]
+```
+
+Produces, in `[output-dir]`:
+
+```
+add_order.parquet          order_cancel.parquet   order_replace.parquet
+add_order_mpid.parquet     order_delete.parquet   trade.parquet
+order_executed.parquet     cross_trade.parquet    broken_trade.parquet
+order_executed_price.parquet
+```
+
+
 ## Testing
  
 Unit tests cover `OrderbookT`, `OrderbookManager` and `parser::` using Google Test. Orderbook/manager tests are typed over both `FastOrderbook` and `BBOOrderbook`: add bid/ask, partial cancel, full delete, partial and full execution, execution with price, and order replace, plus `BBOOrderbook`-specific tests for `best()` tracking. Ticker key conversion and timestamp parsing are also tested.
@@ -216,7 +249,7 @@ ctest --test-dir build --output-on-failure
  
 - [X] Investigate flat sorted price-level representation vs `unordered_map` at shallow book depths — implemented as `BBOOrderbook`, benchmarked side by side with the original `unordered_map`-backed `FastOrderbook`
 - [ ] Top-of-book BBO output stream
-- [ ] Persist L2 order book data over time, split into logical files by event type (adds/deletes/modifies/etc.) in Parquet/Arrow
+- [X] Persist L2 order book data over time, split into logical files by event type (adds/deletes/modifies/etc.) in Parquet/Arrow — see [Parquet Export](#parquet-export-optional)
 - [ ] Data analysis on the persisted data in Python (polars)
 - [ ] Reconstruct L3 order book data (full per-order detail, not just aggregated price levels)
  

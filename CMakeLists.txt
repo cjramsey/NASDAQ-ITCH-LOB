@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(BUILD_PARQUET_EXPORT "Build ITCH-to-Parquet export tool (requires Arrow/Parquet installed)" OFF)
+
 include(cmake/FetchDependencies.cmake)
 
 add_library(project_options INTERFACE)
@@ -33,6 +35,10 @@ target_compile_definitions(ring_buffer_perf PRIVATE USE_RING_BUFFER)
 foreach(TARGET direct ring_buffer)
     set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endforeach()
+
+if (BUILD_PARQUET_EXPORT)
+    add_subdirectory(src/parquet_export)
+endif()
 
 if(PROJECT_IS_TOP_LEVEL)
     option(BUILD_TESTS      "Build tests"       ON)
