@@ -267,11 +267,11 @@ struct CrossTradeMessage {
     uint16_t stock_locate;
     uint16_t tracking_number;
     std::array<uint8_t, 6> timestamp;
-    uint64_t order_reference_number;
-    Side side;
     uint64_t shares;
     std::array<char, 8> stock;
     uint32_t cross_price;
+    uint64_t match_number;
+    char cross_type;
 };
 
 struct BrokenTradeMessage {
@@ -375,5 +375,10 @@ using Message = std::variant<
     OrderCancelMessage,
     OrderDeleteMessage,
     OrderReplaceMessage,
+#ifdef BUILD_PARQUET_EXPORT
+    TradeMessage,
+    CrossTradeMessage,
+    BrokenTradeMessage,
+#endif
     std::monostate
 >;

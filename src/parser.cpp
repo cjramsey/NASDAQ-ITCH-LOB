@@ -6,7 +6,6 @@
 
 #include "types.h"
 #include "parser.h"
-#include "lob.h"
 
 namespace {
     template <typename T>
@@ -119,6 +118,48 @@ OrderReplaceMessage parser::parse_order_replace(const std::byte* cursor) {
     return msg;
 };
 
+TradeMessage parser::parse_trade(const std::byte* cursor) {
+    TradeMessage msg;
+
+    msg.stock_locate = read_field<uint16_t>(cursor);
+    msg.tracking_number = read_field<uint16_t>(cursor);
+    msg.timestamp = read_field<Timestamp>(cursor);
+    msg.order_reference_number = read_field<uint64_t>(cursor);
+    msg.side = read_field<Side>(cursor);
+    msg.shares = read_field<uint32_t>(cursor);
+    msg.stock = read_field<Ticker>(cursor);
+    msg.price = read_field<uint32_t>(cursor);
+    msg.match_number = read_field<uint64_t>(cursor);
+
+    return msg;
+};
+
+CrossTradeMessage parser::parse_cross_trade(const std::byte* cursor) {
+    CrossTradeMessage msg;
+
+    msg.stock_locate = read_field<uint16_t>(cursor);
+    msg.tracking_number = read_field<uint16_t>(cursor);
+    msg.timestamp = read_field<Timestamp>(cursor);
+    msg.shares = read_field<uint64_t>(cursor);
+    msg.stock = read_field<Ticker>(cursor);
+    msg.cross_price = read_field<uint32_t>(cursor);
+    msg.match_number = read_field<uint64_t>(cursor);
+    msg.cross_type = read_field<char>(cursor);
+
+    return msg;
+};
+
+BrokenTradeMessage parser::parse_broken_trade(const std::byte* cursor) {
+    BrokenTradeMessage msg;
+
+    msg.stock_locate = read_field<uint16_t>(cursor);
+    msg.tracking_number = read_field<uint16_t>(cursor);
+    msg.timestamp = read_field<Timestamp>(cursor);
+    msg.match_number = read_field<uint64_t>(cursor);
+
+    return msg;
+};
+
 ITCHReader::ITCHReader(const std::string& filepath) {
     file.open(filepath, std::ios::in | std::ios::binary);
 
@@ -200,6 +241,26 @@ void ITCHReader::read_messages(std::function<void(Message&& msg)> process, uint6
                 process(msg);
                 break;
             }
+#ifdef BUILD_PARQUET_EXPORT
+            case MessageType::Trade:
+            {
+                TradeMessage msg = parser::parse_trade(cursor);
+                process(msg);
+                break;
+            }
+            case MessageType::CrossTrade:
+            {
+                CrossTradeMessage msg = parser::parse_cross_trade(cursor);
+                process(msg);
+                break;
+            }
+            case MessageType::BrokenTrade:
+            {
+                BrokenTradeMessage msg = parser::parse_broken_trade(cursor);
+                process(msg);
+                break;
+            }
+#endif
             default:
                 break;
         }

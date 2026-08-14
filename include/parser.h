@@ -42,6 +42,9 @@ OrderExecutedPriceMessage parse_order_executed_price(const std::byte* cursor);
 OrderCancelMessage parse_order_cancel(const std::byte* cursor);
 OrderReplaceMessage parse_order_replace(const std::byte* cursor);
 OrderDeleteMessage parse_order_delete(const std::byte* cursor);
+TradeMessage parse_trade(const std::byte* cursor);
+CrossTradeMessage parse_cross_trade(const std::byte* cursor);
+BrokenTradeMessage parse_broken_trade(const std::byte* cursor);
 
 std::vector<std::byte> build_add_order_bytes(uint64_t timestamp, uint64_t order_reference_number, Side side, uint32_t shares, std::string stock, uint32_t price);
 std::vector<std::byte> build_add_order_mpid_bytes(uint64_t timestamp, uint64_t order_reference_number, Side side, uint32_t shares, std::string stock, uint32_t price, uint32_t MPID);
