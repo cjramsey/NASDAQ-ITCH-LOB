@@ -8,6 +8,12 @@
 
 #include "types.h"
 
+namespace parquet_export {
+    // Ticker is space-padded to 8 bytes on the wire; trim the padding before
+    // storing it as a string column.
+    std::string trim_ticker(const Ticker& stock);
+}
+
 // Writes one message type to one Parquet file. Rows are buffered into an
 // arrow::RecordBatchBuilder and flushed to disk every kFlushRows rows, so
 // memory stays bounded regardless of input file size.

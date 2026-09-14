@@ -6,31 +6,36 @@
 #include "types.h"
 #include "parser.h"
 #include "parquet_writer.h"
+#include "depth_writer.h"
 
 int main(int argc, char* argv[])
 {
     if (argc < 3) {
-        std::cout << "Usage: itch_to_parquet [input-file] [output-dir]\n";
+        std::cout << "Usage: itch_to_parquet [input-file] [output-dir] [levels]\n";
         return 0;
     }
 
     const std::string input_path{argv[1]};
     const std::string output_dir{argv[2]};
+    const size_t levels = (argc > 3) ? std::stoul(argv[3]) : 1;
 
     try {
         std::filesystem::create_directories(output_dir);
 
         ITCHReader reader{input_path};
         ParquetExportManager export_manager{output_dir};
+        DepthExportManager depth_manager{output_dir, levels};
         uint64_t counter{};
         auto start = std::chrono::high_resolution_clock::now();
 
-        auto handler = [&export_manager](Message&& msg) {
+        auto handler = [&export_manager, &depth_manager](Message&& msg) {
             export_manager.write(msg);
+            depth_manager.write(msg);
         };
 
         reader.read_messages(handler, counter);
         export_manager.finish();
+        depth_manager.finish();
 
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();

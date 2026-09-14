@@ -106,6 +106,11 @@ uint32_t SortedVectorBook<Compare>::best() const {
     return levels.front().price;
 }
 
+template <typename Compare>
+void SortedVectorBook<Compare>::topLevels(size_t n, std::vector<PriceLevel>& out) const {
+    out.assign(levels.begin(), levels.begin() + std::min(n, levels.size()));
+}
+
 template <typename BidBook, typename AskBook>
 void OrderbookT<BidBook, AskBook>::addOrder(uint32_t price, uint32_t shares, Side side) {
     if (side == Side::Buy)
@@ -125,7 +130,10 @@ void OrderbookT<BidBook, AskBook>::removeOrder(uint32_t price, uint32_t shares, 
 template <typename OrderbookT_>
 void OrderbookManager<OrderbookT_>::process(const Message& msg) {
     std::visit([this](const auto& m) {
-        handle(m);
+        // Skip alternatives without a handle() overload (e.g. Trade/CrossTrade/BrokenTrade,
+        // only present in the BUILD_PARQUET_EXPORT variant) — they don't move resting book state.
+        if constexpr (requires { handle(m); })
+            handle(m);
     }, msg);
 }
 

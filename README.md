@@ -78,7 +78,9 @@ src/
   ├── types.cpp        # Timestamp/stock helpers, ostream operators
   ├── parser.cpp       # ITCHReader::read_messages, parser:: implementations
   ├── lob.cpp          # OrderbookT, book policies, and OrderbookManager method implementations
-  └── main.cpp         # Entry point - direct or ring buffer mode, timing output
+  ├── main.cpp         # Entry point - direct or ring buffer mode, timing output
+  └── parquet_export/  # Optional itch_to_parquet tool: per-message-type writers
+                       # (parquet_writer) + top-N depth snapshots (depth_writer)
  
 tests/
   ├── parser_test.cpp  # Google Test: parser namespace + ITCHParser unit tests
@@ -208,7 +210,10 @@ Efficiency: <ns/msg>
 
 A separate `itch_to_parquet` tool decodes an ITCH file and writes one Parquet
 file per message type — add/execute/cancel/delete/replace, plus trades — for
- analysis (e.g. with polars). It requires Arrow/Parquet to already be installed.
+ analysis (e.g. with polars). It also reconstructs the book (`BBOOrderbook`) as it
+goes and writes `depth.parquet`: one row per book-changing event with the top N
+price levels per side as flat columns (`bid_px_00`, `bid_sz_00`, …, `ask_px_00`, …),
+nulls padding levels deeper than the book. It requires Arrow/Parquet to already be installed.
 
 **Install Arrow/Parquet (one-time):**
 
@@ -223,16 +228,16 @@ cmake --build build --target itch_to_parquet --parallel
 ```
 
 ```bash
-./build/itch_to_parquet [input-file] [output-dir]
+./build/itch_to_parquet [input-file] [output-dir] [levels]
 ```
 
-Produces, in `[output-dir]`:
+`[levels]` is the number of depth levels per side in `depth.parquet` (default 1, i.e. BBO only). Existing files in `[output-dir]` are overwritten. Produces:
 
 ```
 add_order.parquet          order_cancel.parquet   order_replace.parquet
 add_order_mpid.parquet     order_delete.parquet   trade.parquet
 order_executed.parquet     cross_trade.parquet    broken_trade.parquet
-order_executed_price.parquet
+order_executed_price.parquet                      depth.parquet
 ```
 
 
@@ -248,7 +253,7 @@ ctest --test-dir build --output-on-failure
 ## Roadmap
  
 - [X] Investigate flat sorted price-level representation vs `unordered_map` at shallow book depths — implemented as `BBOOrderbook`, benchmarked side by side with the original `unordered_map`-backed `FastOrderbook`
-- [ ] Top-of-book BBO output stream
+- [X] Top-of-book BBO output stream — `depth.parquet` from the Parquet export tool (top-N levels per side, N=1 for BBO)
 - [X] Persist L2 order book data over time, split into logical files by event type (adds/deletes/modifies/etc.) in Parquet/Arrow — see [Parquet Export](#parquet-export-optional)
 - [ ] Data analysis on the persisted data in Python (polars)
 - [ ] Reconstruct L3 order book data (full per-order detail, not just aggregated price levels)
