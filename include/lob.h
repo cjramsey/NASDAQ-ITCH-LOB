@@ -54,6 +54,8 @@ public:
     bool contains(uint32_t price) const;
     uint64_t sharesAt(uint32_t price) const;
     uint32_t best() const;
+    // Copies up to n best levels (in book order) into out; out.size() < n if the book is shallower.
+    void topLevels(size_t n, std::vector<PriceLevel>& out) const;
 
 private:
     std::vector<PriceLevel>::iterator find(uint32_t price);

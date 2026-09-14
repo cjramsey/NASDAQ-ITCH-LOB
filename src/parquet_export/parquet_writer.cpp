@@ -4,14 +4,16 @@
 
 #include "parquet_writer.h"
 
-namespace {
-    // Ticker is space-padded to 8 bytes on the wire; trim the padding before
-    // storing it as a string column.
+namespace parquet_export {
     std::string trim_ticker(const Ticker& stock) {
         std::string s(stock.data(), stock.size());
         auto end = s.find_last_not_of(' ');
         return (end == std::string::npos) ? std::string{} : s.substr(0, end + 1);
     }
+}
+
+namespace {
+    using parquet_export::trim_ticker;
 
     std::string side_to_string(Side side) {
         return std::string(1, static_cast<char>(side));
