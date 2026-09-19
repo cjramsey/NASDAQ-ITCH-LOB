@@ -18,3 +18,13 @@ dispatch.txt
 
 CLAUDE.md
 CHECKLIST.md
+
+# Python analysis
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+*.pdf
+
+# Exploratory scratch notebook (~16MB of embedded plot JSON)
+analysis/notebook.ipynb
