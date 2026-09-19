@@ -10,6 +10,7 @@ A C++23 NASDAQ TotalView-ITCH 5.0 binary feed parser with full limit order book 
 - ~9.4 ns/message decode-only throughput on 100MB; 320 ns/message full parse + order-book reconstruction across a real ~13GB, 423M-message trading day  
 - Explores trade-offs between direct processing and lock-free SPSC queue architectures  
 - Designed with attention to memory layout, cache behaviour, and minimal allocation  
+- Reconstructed book exported to Parquet and used to replicate a published market-microstructure result (Cont, Kukanov & Stoikov) in Python  
 
  
 ## Contents
@@ -22,9 +23,10 @@ A C++23 NASDAQ TotalView-ITCH 5.0 binary feed parser with full limit order book 
 6. [Build](#build)
 7. [Usage](#usage)
 8. [Parquet Export (optional)](#parquet-export-optional)
-9. [Testing](#testing)
-10. [Roadmap](#roadmap)
-11. [References](#references)
+9. [Analysis: Order Flow Imbalance and Price Impact](#analysis-order-flow-imbalance-and-price-impact)
+10. [Testing](#testing)
+11. [Roadmap](#roadmap)
+12. [References](#references)
 
  
 ## Overview
@@ -88,6 +90,13 @@ tests/
  
 benchmarks/
   └── bench.cpp        # Google Benchmark targets
+
+analysis/
+  ├── src/analysis/ofi.py     # Shared pipeline: depth.parquet loading, OFI construction,
+  │                           # interval aggregation, price-impact and per-window fits
+  ├── ofi_analysis.ipynb      # Linear price impact of order flow imbalance
+  ├── depth-analysis.ipynb    # Price impact vs market depth (beta = c / AD^lambda)
+  └── pyproject.toml          # uv-managed environment (polars, statsmodels, plotly)
  
 cmake/
   └── FetchDependencies.cmake  # FetchContent for GTest, Google Benchmark, unordered_dense
@@ -241,6 +250,92 @@ order_executed_price.parquet                      depth.parquet
 ```
 
 
+## Analysis: Order Flow Imbalance and Price Impact
+
+Two notebooks in `analysis/` use the exported book to replicate Cont, Kukanov & Stoikov's
+results on a single NASDAQ ITCH sample trading day. The input is `depth.parquet` at `levels=1`,
+so every row is a change in the price or size of the best bid or ask, which is exactly the
+event clock the paper's order flow imbalance measure is defined on. Data handling is polars
+(the depth file is scanned lazily and collected with the streaming engine, since it runs to
+hundreds of millions of rows), regressions are statsmodels, plots are plotly. Shared pipeline
+code lives in `analysis/src/analysis/ofi.py` so both notebooks estimate from one definition.
+
+**Setup**
+
+```bash
+cd analysis
+uv sync
+uv run jupyter lab
+```
+
+**Order flow imbalance (`ofi_analysis.ipynb`)**
+
+For each book event $n$, the paper's order flow imbalance contribution is
+
+$$e_n = \mathbb{1}_{\{P^b_n \geq P^b_{n-1}\}} q^b_n - \mathbb{1}_{\{P^b_n \leq P^b_{n-1}\}} q^b_{n-1} - \mathbb{1}_{\{P^a_n \leq P^a_{n-1}\}} q^a_n + \mathbb{1}_{\{P^a_n \geq P^a_{n-1}\}} q^a_{n-1}$$
+
+where $P^b, q^b$ are the best bid price and size and $P^a, q^a$ the best ask. Summing $e_n$
+over 10-second intervals of regular trading hours gives $\mathrm{OFI}_k$, regressed against the
+mid-price change in ticks: $\Delta P_k = \alpha + \beta\,\mathrm{OFI}_k + \varepsilon_k$.
+
+| Ticker | Events | $\beta$ (ticks/share) | $t(\beta)$ | $R^2$ |
+|---|---|---|---|---|
+| SPY | 4,161,382 | 1.41e-4 | 23.7 | 0.334 |
+| QQQ | 4,207,542 | 1.94e-4 | 24.6 | 0.609 |
+| AMD | 2,341,809 | 1.41e-4 | 39.9 | 0.789 |
+| INTC | 1,586,139 | 2.28e-4 | 5.7 | 0.635 |
+| GOOGL | 1,487,675 | 9.40e-3 | 10.5 | 0.138 |
+
+Every $\beta$ is positive and strongly significant, and the binned means fall on a straight
+line through the origin, so the sign and linearity of the relation reproduce cleanly. Fit
+quality separates the names: AMD, QQQ and INTC land in the paper's reported $R^2$ range, SPY's
+$\beta$ is robust but its $R^2$ sits below it, and GOOGL is the informative failure. At a
+64-tick average spread the mid-price moves in jumps that top-of-book flow does not explain, and
+its $R^2$ collapses accordingly. The interval length is a free parameter, and a sweep over
+1s, 5s, 10s, 30s and 60s leaves every $t(\beta)$ above 4.8, so the result is not an artifact
+of the paper's 10s choice.
+
+**Depth scaling (`depth-analysis.ipynb`)**
+
+The paper's structural explanation for why $\beta$ varies across stocks and across the day is
+that price impact is inversely proportional to the depth available at the best quotes:
+
+$$\beta_{i,w} = \frac{c}{AD_{i,w}^{\lambda}}, \qquad \lambda \approx 1$$
+
+Following the paper's two-step procedure, $\beta_{i,w}$ is estimated per ticker per half-hour
+window for the 25 most active tickers, $\hat\lambda$ comes from a log-log regression of $\beta$
+on average depth, and $\hat{c}$ from a levels regression of $\beta$ on $AD^{-\hat\lambda}$.
+After filtering to windows with at least 100 intervals and a significant $\beta$, 322 of 325
+ticker-windows remain.
+
+| Estimator | $\hat\lambda$ | 95% CI | $R^2$ | n |
+|---|---|---|---|---|
+| Pooled, common $c$ | 0.998 | (0.935, 1.062) | 0.966 | 322 |
+| Fixed effects, per-ticker $c$ | 0.914 | (0.795, 1.033) | 0.594 | 322 |
+| Median per-ticker | 0.972 | | | 25 |
+
+$\lambda = 1$ falls inside the 95% interval for 20 of the 25 tickers individually, and the
+pooled estimate is statistically indistinguishable from 1, matching the paper's grand mean of
+0.98. Imposing $\lambda = 1$ gives a median $\hat{c}$ of 0.26 ticks against the paper's 0.45
+and the stylized model's 0.5. The same mechanism explains the intraday pattern: $\beta$ opens
+at 1.43 times its daily average while depth opens at 0.79, and the close reverses both.
+
+**Inference**
+
+All reported intervals are Wald tests on robust covariance estimates, which statsmodels
+evaluates against the normal distribution rather than Student's t. Window-level and full-day
+$\beta$ use White (HC1) errors, as the paper does. The per-ticker scaling regressions use
+Newey-West, since the half-hour window series are autocorrelated. The pooled and fixed-effects
+panel estimates cluster by ticker, without which treating 322 ticker-windows as independent
+narrows the confidence interval by roughly a factor of three.
+
+**Caveats**
+
+One trading day, one venue (NASDAQ only, so the consolidated depth a real trader sees is
+deeper than what is measured here), and $\beta$ estimated from 10-second intervals inside
+30-minute windows. The paper uses 50 stocks over several weeks of NYSE TAQ data.
+
+
 ## Testing
  
 Unit tests cover `OrderbookT`, `OrderbookManager` and `parser::` using Google Test. Orderbook/manager tests are typed over both `FastOrderbook` and `BBOOrderbook`: add bid/ask, partial cancel, full delete, partial and full execution, execution with price, and order replace, plus `BBOOrderbook`-specific tests for `best()` tracking. Ticker key conversion and timestamp parsing are also tested.
@@ -255,7 +350,8 @@ ctest --test-dir build --output-on-failure
 - [X] Investigate flat sorted price-level representation vs `unordered_map` at shallow book depths — implemented as `BBOOrderbook`, benchmarked side by side with the original `unordered_map`-backed `FastOrderbook`
 - [X] Top-of-book BBO output stream — `depth.parquet` from the Parquet export tool (top-N levels per side, N=1 for BBO)
 - [X] Persist L2 order book data over time, split into logical files by event type (adds/deletes/modifies/etc.) in Parquet/Arrow — see [Parquet Export](#parquet-export-optional)
-- [ ] Data analysis on the persisted data in Python (polars)
+- [X] Data analysis on the persisted data in Python (polars) — order flow imbalance and depth-scaling replication, see [Analysis](#analysis-order-flow-imbalance-and-price-impact)
+- [ ] Multi-level order flow imbalance, requiring a ticker filter on the exporter so deeper books can be written without exporting every symbol
 - [ ] Reconstruct L3 order book data (full per-order detail, not just aggregated price levels)
  
 
@@ -264,3 +360,4 @@ ctest --test-dir build --output-on-failure
 - [NASDAQ TotalView-ITCH 5.0 Specification](http://www.nasdaqtrader.com/content/technicalsupport/specifications/dataproducts/NQTVITCHspecification.pdf)
 - [NASDAQ Historical Data](https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/)
 - [ankerl::unordered_dense](https://github.com/martinus/unordered_dense)
+- Cont, R., Kukanov, A. and Stoikov, S. (2014). [The price impact of order book events](https://doi.org/10.1093/jjfinec/nbt003). *Journal of Financial Econometrics*, 12(1), 47–88. Working paper version (March 2011) at [arXiv:1011.6402](https://arxiv.org/abs/1011.6402), a copy of which is in `analysis/`
